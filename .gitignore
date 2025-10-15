@@ -19,7 +19,7 @@ env/
 *.swp
 *.swo
 
-# --- Model files / ML 大文件 ---
+# --- Model files / ML 大文件 (仅忽略根目录下的模型文件夹与文件) ---
 Model/
 models/
 checkpoints/
@@ -40,19 +40,12 @@ Thumbs.db
 
 # --- Others ---
 wget-log*
-Model/
-*.pt
-*.bin
-*.tar
-*.zip
+*.log
+*.pid
 
-
-# 忽略本地虚拟环境
+# --- 忽略本地虚拟环境 ---
 .venv/
 
-# 忽略模型文件夹与模型压缩包
-Model/
-*.safetensors
-*.tar
-*.bin
-*.pt
+# --- 允许 app 下的 models 文件夹被追踪 ---
+!app/models/
+!app/models/**
