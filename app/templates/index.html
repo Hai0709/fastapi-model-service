@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<title>图文生成</title>
+<style>
+
+body {
+    margin: 0;
+    background: #141620;
+    font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+    color: #eee;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    padding: 40px 10px;
+    box-sizing: border-box;
+}
+h1 { text-align: center; margin-bottom: 5px; font-size: 2em; }
+h2 { margin-top: 0; color: #9fb3ff; }
+p.desc { margin-bottom: 40px; color: #999; }
+.grid {
+    display: flex; justify-content: center; flex-wrap: wrap;
+    gap: 30px; width: 100%; max-width: 1100px;
+}
+.panel {
+    flex: 1 1 480px; background: #1e2130; border-radius: 12px;
+    padding: 25px 25px 30px 25px; box-shadow: 0 0 12px #0006;
+    display: flex; flex-direction: column; justify-content: flex-start;
+    transition: all 0.3s ease;
+}
+.panel:hover { transform: translateY(-3px); box-shadow: 0 0 18px #0009; }
+label { font-weight: bold; color: #c1c8ff; display: block; margin: 10px 0 4px 0; }
+textarea, input[type="file"] {
+    width: 100%; border: none; border-radius: 6px; padding: 10px;
+    resize: none; background: #2a2f44; color: #eee; font-size: 15px; outline: none;
+}
+button {
+    align-self: center; margin-top: 10px;
+    background: linear-gradient(120deg, #4c8bf5 0%, #7b52f7 100%);
+    border: none; border-radius: 6px; color: white; font-weight: 500;
+    padding: 10px 28px; font-size: 16px; cursor: pointer; transition: all 0.2s ease;
+}
+button:hover { background: linear-gradient(120deg, #5c9fff 0%, #8a64ff 100%); transform: translateY(-1px); }
+.output {
+    margin-top: 15px; text-align: center; min-height: 50px;
+    background: #2c3147; border-radius: 8px; padding: 10px; word-break: break-all;
+}
+img { max-width: 100%; border-radius: 10px; margin-top: 5px; }
+@media (max-width: 900px) {
+    .grid { flex-direction: column; align-items: center; }
+}
+</style>
+</head>
+
+<body>
+    <h1>图文生成</h1>
+    <p class="desc">支持 文生图 以及 图生文 </p>
+
+    <div class="grid">
+        <!-- 文生图 -->
+        <div class="panel" id="text2image">
+            <h2>文生图</h2>
+            <label for="prompt">请输入提示词：</label>
+            <textarea id="prompt" rows="4" placeholder="例如：夜晚的赛博朋克城市，霓虹闪烁的街道上有飞行汽车"></textarea>
+            <button onclick="generateImage()">生成图像</button>
+            <div class="output" id="output_img">效果将在这里显示</div>
+        </div>
+
+        <!-- 图生文 -->
+        <div class="panel" id="image2text">
+            <h2>图生文</h2>
+            <label for="image">请选择图片：</label>
+            <input type="file" id="image" accept="image/*" />
+            <label for="prompt2">请输入提示词（可选）：</label>
+            <textarea id="prompt2" rows="3" placeholder="例如：请详细描述这张图片的内容"></textarea>
+            <button onclick="describeImage()">生成文字描述</button>
+            <div class="output" id="output_txt">描述结果将在这里显示</div>
+        </div>
+    </div>
+
+<script>
+let ws = null;
+let wsConnected = false;
+
+// 建立 WebSocket 连接
+function initWebSocket() {
+    const url = `ws://${window.location.host}/ws/inference`;
+    ws = new WebSocket(url);
+
+    ws.onopen = () => {
+        wsConnected = true;
+        console.log("WebSocket 已连接");
+    };
+    ws.onclose = () => {
+        wsConnected = false;
+        console.log("WebSocket 已关闭");
+    };
+    ws.onerror = err => {
+        wsConnected = false;
+        console.error("WebSocket 错误:", err);
+    };
+    ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        console.log("收到信息：", data);
+
+        if (data.mode === "text2image" && data.image) {
+            const bytes = Uint8Array.from(atob(data.image), c => c.charCodeAt(0));
+            const blob = new Blob([bytes], {type: "image/png"});
+            const url = URL.createObjectURL(blob);
+            document.getElementById("output_img").innerHTML =
+                `<img src="${url}" /><p>图像生成完成</p>`;
+        } else if (data.mode === "image2text" && data.text) {
+            document.getElementById("output_txt").textContent = data.text;
+        } else if (data.status === "error") {
+            alert("❌ " + (data.msg || "请求出错"));
+        }
+    };
+}
+
+// 优先尝试 WebSocket
+initWebSocket();
+
+// 文生图
+async function generateImage() {
+    const prompt = document.getElementById("prompt").value.trim();
+    const out = document.getElementById("output_img");
+    if (!prompt) return alert("请输入提示词！");
+    out.textContent = "⏳ 正在生成，请稍候...";
+
+    if (wsConnected && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ mode: "text2image", text: prompt }));
+    } else {
+        console.log("⚠️ WebSocket 不可用，使用 HTTP fallback");
+        const formData = new FormData();
+        formData.append("text", prompt);
+        formData.append("mode", "text2image");
+        try {
+            const resp = await fetch("/http/inference", { method: "POST", body: formData });
+            const data = await resp.json();
+            if (data.image) {
+                const bytes = Uint8Array.from(atob(data.image), c => c.charCodeAt(0));
+                const blob = new Blob([bytes], { type: "image/png" });
+                const url = URL.createObjectURL(blob);
+                out.innerHTML = `<img src="${url}" /><p>图像生成完成</p>`;
+            } else out.textContent = JSON.stringify(data);
+        } catch (err) {
+            out.textContent = "请求失败：" + err;
+        }
+    }
+}
+
+// 图生文
+async function describeImage() {
+    const out = document.getElementById("output_txt");
+    const imgFile = document.getElementById("image").files[0];
+    const prompt = document.getElementById("prompt2").value.trim();
+    if (!imgFile) return alert("请选择图片！");
+    out.textContent = "⏳ 正在生成，请稍候...";
+
+    // WebSocket 模式
+    if (wsConnected && ws.readyState === WebSocket.OPEN) {
+        const buf = await imgFile.arrayBuffer();
+        const b64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+        ws.send(JSON.stringify({ mode: "image2text", text: prompt, image: b64 }));
+    } else {
+        console.log("⚠️ WebSocket 不可用，使用 HTTP fallback");
+        const formData = new FormData();
+        formData.append("text", prompt);
+        formData.append("image", imgFile);
+        formData.append("mode", "image2text");
+        try {
+            const resp = await fetch("/http/inference", { method: "POST", body: formData });
+            const data = await resp.json();
+            out.textContent = data.text || JSON.stringify(data);
+        } catch (err) {
+            out.textContent = "请求失败：" + err;
+        }
+    }
+}
+</script>
+</body>
+</html>

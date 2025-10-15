@@ -1,0 +1,55 @@
+name: FastAPI Service Tests (uv)
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  test:
+    name: Run Unit Tests with uv
+    runs-on: ubuntu-latest
+
+    steps:
+      # 拉取代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 安装 uv
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "${HOME}/.local/bin" >> $GITHUB_PATH  # 确保 uv 在 PATH 中
+
+      # 设置 Python 版本并创建虚拟环境
+      - name: Set up python with uv
+        run: |
+          uv python install 3.10
+          uv venv .venv
+
+      # 安装依赖
+      - name: Install dependencies
+        run: |
+          uv pip install -e .   # 安装你的 fastapi_model_service 本地包（如果 pyproject.toml 配置了）
+          uv pip install pytest pytest-asyncio httpx pillow
+        env:
+          UV_SYSTEM_PYTHON: 1
+
+      # 运行 pytest 测试
+      - name: Run tests
+        env:
+          TRANSFORMERS_OFFLINE: 1   # 禁止模型自动下载（CI节省时间）
+          HF_HUB_OFFLINE: 1
+          MOCK_MODE: 1              # 可选：代码里可根据该变量走mock逻辑
+        run: |
+          echo "🚀 Running tests via uv"
+          uv run pytest -v --maxfail=1 --disable-warnings -q
+
+      # 可选 - 上传 pytest 结果
+      - name: Upload test results
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pytest-results
+          path: .pytest_cache

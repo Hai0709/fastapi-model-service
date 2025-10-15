@@ -1,0 +1,58 @@
+# --- Python 编译产生的缓存文件 ---
+__pycache__/
+*.py[cod]
+*.pyo
+
+# --- 环境/虚拟环境 ---
+.venv/
+venv/
+env/
+*.conda
+*.egg-info/
+
+# --- FastAPI / 日志和运行产物 ---
+*.log
+*.pid
+
+# --- Jupyter / 临时文件 ---
+.ipynb_checkpoints/
+*.swp
+*.swo
+
+# --- Model files / ML 大文件 ---
+Model/
+models/
+checkpoints/
+*.bin
+*.safetensors
+*.pt
+*.tar
+*.tar.gz
+*.zip
+
+# --- Node / VSCode 临时文件 ---
+node_modules/
+.vscode/
+
+# --- System files ---
+.DS_Store
+Thumbs.db
+
+# --- Others ---
+wget-log*
+Model/
+*.pt
+*.bin
+*.tar
+*.zip
+
+
+# 忽略本地虚拟环境
+.venv/
+
+# 忽略模型文件夹与模型压缩包
+Model/
+*.safetensors
+*.tar
+*.bin
+*.pt

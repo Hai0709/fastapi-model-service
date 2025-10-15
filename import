@@ -1,0 +1,16 @@
+INFO 10-12 20:07:56 [__init__.py:239] Automatically detected platform cuda.
+usage: vllm [-h] [-v] {chat,complete,serve,bench} ...
+
+vLLM CLI
+
+positional arguments:
+  {chat,complete,serve,bench}
+    chat                Generate chat completions via the running API server.
+    complete            Generate text completions based on the given prompt
+                        via the running API server.
+    serve               Start the vLLM OpenAI Compatible API server.
+    bench               vLLM bench subcommand.
+
+options:
+  -h, --help            show this help message and exit
+  -v, --version         show program's version number and exit
