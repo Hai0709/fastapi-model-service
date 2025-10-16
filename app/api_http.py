@@ -8,7 +8,6 @@ import os
 router = APIRouter()
 
 import base64
-from app.schemas import ImageResponse, TextResponse
 
 @router.post("/inference")
 async def inference_endpoint(

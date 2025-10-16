@@ -14,10 +14,8 @@ _model: HunyuanDiTPipeline | None = None
 async def _load_model() -> HunyuanDiTPipeline:
     """异步加载"""
     global _model
-
     if _model is not None:
         return _model
-
     print(f"正在从 {MODEL_PATH} 加载文生图模型...")
 
     # 检查路径是否存在
